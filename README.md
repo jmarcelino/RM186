@@ -1,5 +1,5 @@
 # RM186 demos
-These are my demos using the Laird RM186 LoRa + BLE module
+These are my demos using the [Laird RM186](http://www.lairdtech.com/products/rm1xx-lora-modules) LoRa + BLE module
 
 Script  | Description
 ----- | -----
@@ -7,7 +7,7 @@ __solarbeacon2lora__ | Receives BLE temperature and humidity advertisement readi
 
 ### Setup
 
-The smartBasic (.sb) files can be _XCompiled_ and loaded to the module using the UwTerminalX from Laird.
+The smartBasic (.sb) files can be _XCompiled_ and loaded to the module using the [UwTerminalX](https://github.com/LairdCP/UwTerminalX) tool from Laird.
 
 Make sure you copy the RM1xx-defs.h file first from the Laird SDK and place it in the same folder as the scripts. This is specific to your version of the firmware.
 
@@ -22,7 +22,7 @@ atz
 You can get your app EUI and key from the Things Network Dashboard, ttnctl command line tool or check with your LoRaWAN provider
 
 ### Acknowledgements
-[Laird](https://github.com/LairdCP) for creating such a great module and providing sample code. Check [their Github](https://github.com/LairdCP) too!
+[Laird](http://www.lairdtech.com/products/rm1xx-lora-modules) for creating such a great module and providing sample code. Check [their Github](https://github.com/LairdCP) too!
 
 [The Things Network](https://www.thethingsnetwork.org) for proving a free backend and a great community
 
