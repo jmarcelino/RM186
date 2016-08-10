@@ -1,7 +1,7 @@
 # RM186 demos
 These are my demos using the Laird RM186 LoRa + BLE module
 
-* __solarbeacon2lora__:  Receives BLE temperature and humidity advertisement readings from Cypress Solar-Powered BLE Sensor Beacons and sends to the configured LoRaWAN application
+__solarbeacon2lora__ | Receives BLE temperature and humidity advertisement readings from Cypress Solar-Powered BLE Sensor Beacons and sends to the configured LoRaWAN application
 
 ### Setup
 
@@ -21,6 +21,7 @@ You can get your app EUI and key from the Things Network Dashboard, ttnctl comma
 
 ### Acknowledgements
 [Laird](https://github.com/LairdCP) for creating such a great module and providing sample code. Check [their Github](https://github.com/LairdCP) too!
+
 [The Things Network](https://www.thethingsnetwork.org) for proving a free backend and a great community
 
 ### References
