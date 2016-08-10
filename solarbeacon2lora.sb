@@ -154,6 +154,9 @@ function Startup() as INTEGER
 
 	// Reset the LoRa radio
   	result = LORAMACReset()
+  	
+  	// Set scan type to passive
+  	result = BleScanConfig(2, 0)
   
 	// Start scanning for BLE devices
   	result=BleScanStart(0,0)
