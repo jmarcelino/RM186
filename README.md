@@ -1,6 +1,8 @@
 # RM186 demos
 These are my demos using the Laird RM186 LoRa + BLE module
 
+Script  | Description
+----- | -----
 __solarbeacon2lora__ | Receives BLE temperature and humidity advertisement readings from Cypress Solar-Powered BLE Sensor Beacons and sends to the configured LoRaWAN application
 
 ### Setup
