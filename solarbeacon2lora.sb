@@ -1,0 +1,194 @@
+//*****************************************************************************
+//              Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
+//
+// Project:     RM186 LoRa/TTN gateway for Cypress solar beacons
+// Module:      RM1XX-defs.H
+//*****************************************************************************/
+
+
+//******************************************************************************
+// Definitions
+//******************************************************************************
+#include "RM1xx-defs.h"
+#include "lib/ble.sblib"
+
+//******************************************************************************
+// Register Error Handler as early as possible
+//******************************************************************************
+sub HandlerOnErr()
+  print "\n OnErr - ";GetLastError();"\n"
+endsub
+onerror next HandlerOnErr
+
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
+
+dim ok$,er$,pr$
+dim urts                    //will be <0 if uart parser suspended
+dim uuid_hex$, uuid$ 
+dim status
+dim linkCheckLoop
+
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
+
+ok$    = "\nOK"
+er$    = "\nERROR "
+pr$    = "\r\n>"
+
+uuid_hex$ = "0005000100001000800000805F9B0131"
+
+
+uuid$ = StrDehexize$(uuid_hex$)
+
+#define LORA_CONNECTED						((1)<<1)
+#define LORA_WAITING_FOR_ACK				((1)<<2)
+
+//==============================================================================
+function HndlrAdvRpt()
+	dim periphAddr$, advData$, nDiscarded, nRssi, result, lorarc
+	//Read all cached advert reports
+	do 
+		result = BleScanGetAdvReport(periphAddr$, advData$, nDiscarded, nRssi)
+		
+		dim uuidfound$ : uuidfound$ = MID$(advData$,9,strlen(uuid$))
+		//print "\nUUID found: ";StrHexize$(uuidfound$)
+		
+		if (strcmp(uuid$,uuidfound$) == 0) then
+			print "\n\nPeer Address: "; StrHexize$(periphAddr$)
+			print "\nAdvert Data: ";StrHexize$(advData$)
+			
+			dim beaconId
+			beaconId = (strgetchr(advData$,9 + 16) * 256) + strgetchr(advData$,9 + 16 + 1)
+			print "\nBeacon major ID: "; beaconId
+			
+			dim humidity
+			humidity = strgetchr(advData$, 9 + 16 + 2) / 2 - 6
+			print "\nHumidity: "; humidity
+			
+			dim temperature
+			temperature = (88 * strgetchr(advData$, 9 + 16 + 3)  / 128) - 47
+			print "\nTemperature: "; temperature
+			
+			print "\nNo. Discarded Adverts: ";nDiscarded
+			print "\nRSSI: ";nRssi
+
+			dim data$
+			data$ = MID$(advData$, 9 + 16 + 1, 9 + 16 + 3)
+			lorarc = LORAMACTxData(1, data$ , 0)
+		endif
+	until result != 0
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when there is a LoRa TX Complete event
+'//==============================================================================
+function HandlerLoRaTxComp() as integer
+	dim result
+	
+	print "LoRa TX Complete Event\n"
+	if linkCheckLoop>0 then
+		result = LORAMACLinkCheck()
+	endif
+    status = status&(!LORA_WAITING_FOR_ACK)
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when there is a LoRa RX Complete event
+'//==============================================================================
+function HandlerLoRaRxComp() as integer
+	print "LoRa RX Complete Event\n"
+endfunc 1
+
+
+'//==============================================================================
+'// This handler is called when the LoRa Join procedure starts
+'//==============================================================================
+function HandlerLoRaJoining() as integer
+	print "Attempting to join the LoRa network\n"
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when the LoRa Join Process completes successfully
+'//==============================================================================
+function HandlerLoRaJoined() as integer
+  print "Joined the LoRa network\n"
+  status = status+LORA_CONNECTED
+  
+  //if status == (LORA_CONNECTED + BLE_CONNECTED) then
+  // rc=startDemo()
+  // endif
+endfunc 1
+
+
+
+
+
+//==============================================================================
+sub UartRsp(rsp as integer)
+	if rsp == 0 then
+		print ok$;pr$
+	elseif rsp > 0 then 
+		print er$;integer.h' rsp;pr$
+	endif
+	urts = rsp
+endsub
+
+//==============================================================================
+function Startup() as INTEGER
+	dim result 
+	status = 0
+	
+	linkCheckLoop = 0
+
+	// Reset the LoRa radio
+  	result = LORAMACReset()
+
+	// Open the GATT client
+	// result=BleGattcOpen(0,0)
+  
+	// Start scanning for BLE devices
+  	result=BleScanStart(0,0)
+  	
+  	if status != (LORA_CONNECTED) then
+	  // Join the LoRa network
+	  result = LORAMACJoin(LORAMAC_JOIN_BY_REQUEST)	  
+    endif
+  
+endfunc result
+
+//==============================================================================
+// Event handlers
+//==============================================================================
+
+ONEVENT EVBLE_ADV_REPORT CALL HndlrAdvRpt
+
+
+OnEvent  EVLORAMACTXCOMPLETE      call HandlerLoRaTxComp
+OnEvent  EVLORAMACRXCOMPLETE      call HandlerLoRaRxComp
+OnEvent  EVLORAMACJOINING         call HandlerLoRaJoining
+OnEvent  EVLORAMACJOINED          call HandlerLoRaJoined
+
+//==============================================================================
+// Main block
+//==============================================================================
+dim result
+
+result = Startup()
+
+//Send an OK response
+if result == 0 then
+	UartRsp(0)
+else
+	UartRsp(1)
+endif
+
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
+WaitEvent
+
+
