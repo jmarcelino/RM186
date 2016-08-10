@@ -2,7 +2,6 @@
 //              Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
 //
 // Project:     RM186 LoRa/TTN gateway for Cypress solar beacons
-// Module:      RM1XX-defs.H
 //*****************************************************************************/
 
 
@@ -38,6 +37,7 @@ ok$    = "\nOK"
 er$    = "\nERROR "
 pr$    = "\r\n>"
 
+// Set this to the "beacon" UUID we're looking for. Here we use the default from Cypress 
 uuid_hex$ = "0005000100001000800000805F9B0131"
 
 
@@ -53,21 +53,27 @@ function HndlrAdvRpt()
 	do 
 		result = BleScanGetAdvReport(periphAddr$, advData$, nDiscarded, nRssi)
 		
+		
+		// Does UUID field (from byte #9) match what we're looking for?
 		dim uuidfound$ : uuidfound$ = MID$(advData$,9,strlen(uuid$))
-		//print "\nUUID found: ";StrHexize$(uuidfound$)
 		
 		if (strcmp(uuid$,uuidfound$) == 0) then
 			print "\n\nPeer Address: "; StrHexize$(periphAddr$)
 			print "\nAdvert Data: ";StrHexize$(advData$)
 			
+			// Beacon ID is stored as 16 bit number after the UUID (position 9 + 16 byte UUID)
 			dim beaconId
 			beaconId = (strgetchr(advData$,9 + 16) * 256) + strgetchr(advData$,9 + 16 + 1)
 			print "\nBeacon major ID: "; beaconId
 			
+			// Humidity is stored as byte after UUID and beacon, here we approximate formula from Cypress to integer for display
+			// humidity = 125 * (humidity_byte * 256) / 65536 - 6;
 			dim humidity
 			humidity = strgetchr(advData$, 9 + 16 + 2) / 2 - 6
 			print "\nHumidity: "; humidity
 			
+			// Temperature is coded in byte after humidity
+			// Approximation from Cypress's formula: 175.72 * (bytes[2] * 256) / 65536 - 46.85
 			dim temperature
 			temperature = (88 * strgetchr(advData$, 9 + 16 + 3)  / 128) - 47
 			print "\nTemperature: "; temperature
@@ -75,8 +81,11 @@ function HndlrAdvRpt()
 			print "\nNo. Discarded Adverts: ";nDiscarded
 			print "\nRSSI: ";nRssi
 
+			// Here we grab grab raw data bytes (ID + Humidity + Temperature) to send over LoRa
+			// In TTN we use a server side function to convert these to JSON fields
 			dim data$
 			data$ = MID$(advData$, 9 + 16 + 1, 9 + 16 + 3)
+			// Send without ACK
 			lorarc = LORAMACTxData(1, data$ , 0)
 		endif
 	until result != 0
@@ -145,9 +154,6 @@ function Startup() as INTEGER
 
 	// Reset the LoRa radio
   	result = LORAMACReset()
-
-	// Open the GATT client
-	// result=BleGattcOpen(0,0)
   
 	// Start scanning for BLE devices
   	result=BleScanStart(0,0)
