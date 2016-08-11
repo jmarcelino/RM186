@@ -4,6 +4,7 @@ These are my demos using the [Laird RM186](http://www.lairdtech.com/products/rm1
 Script  | Description
 ----- | -----
 __solarbeacon2lora__ | Receives BLE temperature and humidity advertisement readings from Cypress Solar-Powered BLE Sensor Beacons and sends to the configured LoRaWAN application
+__i2cscan__ | Simple I2C bus scanner
 
 ### Setup
 
