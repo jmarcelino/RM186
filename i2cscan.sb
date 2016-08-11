@@ -1,0 +1,37 @@
+//*****************************************************************************
+// Project:  RM186 I2C simple scanner
+// Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
+//
+// ATTENTION: This code scans for I2C by reading register 0 at each address
+// It may not be accurate and/or cause undesired operation
+//*****************************************************************************/
+
+
+dim handle
+
+// First and last addresses to scan (default 0x3 to 0x77)
+dim first : first = 3
+dim last : last = 177
+
+print "RM186 I2C bus Scanner\n"
+print "---------------------" 
+
+
+dim rc : rc=I2cOpen(100000,0,handle)
+if rc!= 0 THEN
+    print "\nFailed to open I2C interface with error code ";integer.h' rc
+else
+    print "\nI2C open success \nHandle is "; handle; "\n"
+endif
+
+dim i,res,nRegVal
+for i=first to last step 1
+	//print "\nProbing "; INTEGER.H'i; ":"
+	
+	res = I2cReadReg8(i, 0, nRegVal)
+ 	if res == 0 THEN
+		print "\nDevice found at address 0x"; INTEGER.H'i
+	endif
+next
+
+I2cClose(handle)
