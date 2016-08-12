@@ -10,8 +10,8 @@
 dim handle
 
 // First and last addresses to scan (default 0x3 to 0x77)
-dim first : first = 3
-dim last : last = 177
+dim first : first = 0x3
+dim last : last = 0x77
 
 print "RM186 I2C bus Scanner\n"
 print "---------------------" 
