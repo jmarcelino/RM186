@@ -1,0 +1,71 @@
+//*****************************************************************************
+// Project:  RM186/BL600 DS3231 interface library
+// Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
+//
+//*****************************************************************************/
+
+// Set this to the I2C address of the DS3231 (default 0x68)
+dim dsSlaveAddr: dsSlaveAddr=0x68
+
+// Convert normal binary coded decimal numbers to integer
+function bcdToDec(byVal val)
+	val = ((val/16) * 10) + (val % 16)
+endfunc val
+
+// Convert normal decimal numbers to binary coded decimal
+function decToBcd(byVal val)	
+	 val = ((val/10)*16) + (val % 10)
+endfunc val
+
+function getSeconds(byRef sec)
+	dim res
+	res = I2cReadReg8(dsSlaveAddr, 0x0, sec)
+	sec = bcdToDec(sec)
+endfunc res
+
+function getMinutes(byRef minutes)
+	dim res
+	res = I2cReadReg8(dsSlaveAddr, 0x1, minutes)
+	minutes = bcdToDec(minutes)
+endfunc res
+
+function getHour(byRef hour, byRef h12, byRef pm)
+	dim res, value 
+	res = I2cReadReg8(dsSlaveAddr, 0x2, value)
+	
+	h12 = value & b'01000000
+	
+	if h12 > 0 then
+		pm = value & b'00100000
+		hour = bcdToDec(value & b'00011111)
+	else
+		hour = bcdToDec(value & b'00111111)
+	endif 
+endfunc res
+
+function getDoW(byRef dow)
+	dim res
+	res = I2cReadReg8(dsSlaveAddr, 0x3, dow)
+	dow = bcdToDec(dow)
+endfunc res
+
+function getDate(byRef day)
+	dim res
+	res = I2cReadReg8(dsSlaveAddr, 0x4, day)
+	day = bcdToDec(day)	
+endfunc res
+
+
+function getMonth(byRef month, byRef century) 
+	dim res, value
+	res = I2cReadReg8(dsSlaveAddr, 0x5, value)
+
+	century = value & b'10000000
+	month = bcdToDec(value & b'01111111)
+endfunc res
+
+function getYear(byRef year)
+	dim res
+	res = I2cReadReg8(dsSlaveAddr, 0x6, year)
+	year = bcdToDec(year)
+endfunc res	

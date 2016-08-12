@@ -1,0 +1,95 @@
+//*****************************************************************************
+// Project:  RM186/BL600 DS3231 library tests
+// Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
+//*****************************************************************************/
+
+#include "ds3231-lib.sb"
+
+DIM rc
+DIM handle
+DIM nSlaveAddr
+DIM stWrite$, stRead$, nReadLen
+dim i, res, nRegVal
+
+FUNCTION HandlerTimer0()
+	print "."
+ENDFUNC 0
+
+
+// Event handler for the timer
+ONEVENT EVTMR0 CALL HandlerTimer0
+
+
+rc=I2cOpen(100000,0,handle)
+if rc!= 0 THEN
+    print "\nFailed to open I2C interface with error code ";integer.h' rc
+else
+    print "\nI2C open success \nHandle is "; handle; "\n"
+endif
+
+// Test read hours and AM/PM mode
+dim hour, h12, pm
+res = getHour(hour, h12, pm)
+if res == 0 THEN
+		print "\nh12: "; h12
+		print "\npm: "; pm
+		print "\nHour: "; hour
+		if h12 > 0 then
+			if pm then
+				print "PM"
+			else 
+				print "AM"
+			endif
+		endif	
+endif
+
+// Test read minutes
+dim minutes
+res = getMinutes(minutes)
+if res == 0 THEN
+	print "\nMinute: ";minutes
+endif
+
+// Test read seconds
+for i = 1 to 10 step 1
+	dim sec
+	res = getSeconds(sec)
+ 	if res == 0 THEN
+		print "\nSecond: "; sec	
+	endif
+	
+	TimerStart(0,1000,0)
+	waitevent
+next
+	
+// Test read Day of Week
+dim dow
+res = getDoW(dow)
+if res == 0 THEN
+	print "\nDoW: ";dow
+endif
+	
+	
+// Test read Day of month
+dim day
+res = getDate(day)
+if res == 0 THEN
+	print "\nDay ";day
+endif
+	
+// Test read month
+dim month, century
+res = getMonth(month, century)
+if res == 0 then
+	print "\nMonth ";month
+	print "\nCentury overflow: ";century
+endif
+
+// Test read year
+dim year
+res = getYear(year)
+if res == 0 THEN
+	print "\nYear ";year
+endif
+
+I2cClose(handle)

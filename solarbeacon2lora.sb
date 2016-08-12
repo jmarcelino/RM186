@@ -172,8 +172,7 @@ endfunc result
 // Event handlers
 //==============================================================================
 
-ONEVENT EVBLE_ADV_REPORT CALL HndlrAdvRpt
-
+OnEvent EVBLE_ADV_REPORT CALL HndlrAdvRpt
 
 OnEvent  EVLORAMACTXCOMPLETE      call HandlerLoRaTxComp
 OnEvent  EVLORAMACRXCOMPLETE      call HandlerLoRaRxComp
