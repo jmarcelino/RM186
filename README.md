@@ -5,6 +5,8 @@ Script  | Description
 ----- | -----
 __solarbeacon2lora__ | Receives BLE temperature and humidity advertisement readings from Cypress Solar-Powered BLE Sensor Beacons and sends to the configured LoRaWAN application
 __i2cscan__ | Simple I2C bus scanner
+__ds3231-lib__ | Library of functions for the DS3231 Real Time Clock connected via I2C
+__ds3231-test__ | Test script for ds3231-lib
 
 ### Setup
 
