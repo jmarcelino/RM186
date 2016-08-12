@@ -2,6 +2,9 @@
 // Project:  RM186/BL600 DS3231 interface library
 // Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
 //
+// original Arduino code by
+// Eric Ayars - 4/1/11
+// Adapted to Laird smartBASIC by Jose Marcelino
 //*****************************************************************************/
 
 // Set this to the I2C address of the DS3231 (default 0x68)
@@ -68,4 +71,102 @@ function getYear(byRef year)
 	dim res
 	res = I2cReadReg8(dsSlaveAddr, 0x6, year)
 	year = bcdToDec(year)
-endfunc res	
+endfunc res
+
+
+// Sets the seconds 
+function setSecond(byVal second)
+
+	dim res
+	res = I2cWriteReg8(dsSlaveAddr, 0x0, decToBcd(second))
+
+	// TODO: This function also resets the Oscillator Stop Flag, which is set
+	// whenever power is interrupted.
+	// Clear OSF flag
+	// byte temp_buffer = readControlByte(1);
+	// writeControlByte((temp_buffer & 0b01111111), 1);
+endfunc res
+
+// Sets the minutes 
+function setMinute(byVal minute)
+
+	dim res
+	res = I2cWriteReg8(dsSlaveAddr, 0x1, decToBcd(minute))
+endfunc res
+
+// Sets the hour, without changing 12/24h mode.
+// The hour must be in 24h format.
+function setHour(byVal hour) 
+
+	dim res, h12, value
+
+	// Start by figuring out what the 12/24 mode is
+	res = I2cReadReg8(dsSlaveAddr, 0x2, value)
+	h12 = value & b'01000000
+
+	if h12 > 0 then
+		// 12 hour
+		if hour > 12 then
+			hour = decToBcd(hour-12) | b'01100000
+		else
+			hour = decToBcd(hour) & b'11011111
+			hour = hour | h12
+		endif
+	else
+		// 24 hour
+		hour = decToBcd(hour) & b'10111111
+	endif
+
+	res = I2cWriteReg8(dsSlaveAddr, 0x2, hour)
+endfunc res
+
+// Sets the Day of Week
+function setDoW(byVal dow) 
+
+	dim res
+	res = I2cWriteReg8(dsSlaveAddr, 0x3, decToBcd(dow))
+endfunc res
+
+// Sets the day of month
+function setDate(byVal date) 
+
+	dim res
+	res = I2cWriteReg8(dsSlaveAddr, 0x4, decToBcd(date))
+endfunc res
+
+// Sets the month
+function setMonth(byVal month) 
+	dim res
+	res = I2cWriteReg8(dsSlaveAddr, 0x5, decToBcd(month))
+endfunc res
+
+// Sets the year
+function setYear(byVal year) 
+	dim res
+	res = I2cWriteReg8(dsSlaveAddr, 0x6, decToBcd(year))
+endfunc res
+
+// sets the mode to 12-hour (true) or 24-hour (false).
+// One thing that bothers me about how I've written this is that
+// if the read and right happen at the right hourly millisecnd,
+// the clock will be set back an hour. Not sure how to do it better, 
+// though, and as long as one doesn't set the mode frequently it's
+// a very minimal risk. 
+// It's zero risk if you call this BEFORE setting the hour, since
+// the setHour() function doesn't change this mode.
+function setClockMode(byVal h12) 
+	
+	dim value, res
+
+	// Start by reading byte 0x02.
+	res = I2cReadReg8(dsSlaveAddr, 0x2, value)
+
+	// Set the flag to the requested value:
+	if h12 > 0 then
+		value = value | b'01000000
+	else
+		value = value & b'10111111
+	endif
+
+	res = I2cWriteReg8(dsSlaveAddr, 0x2, value)
+endfunc res

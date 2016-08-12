@@ -27,12 +27,29 @@ else
     print "\nI2C open success \nHandle is "; handle; "\n"
 endif
 
+res = setClockMode(1)
+if res == 0 then
+	print "\nChanged to AM/PM mode"
+endif
+
+// Try to set clock to 5PM
+res = setHour(17)
+if res == 0 then
+	print "\nHour changed"
+endif
+
+
 // Test read hours and AM/PM mode
 dim hour, h12, pm
 res = getHour(hour, h12, pm)
 if res == 0 THEN
-		print "\nh12: "; h12
-		print "\npm: "; pm
+		print "\n12h clock: "
+		if h12 > 0 then
+			print "Yes (use AM/PM)"
+		else 
+			print "No (24h)"
+		endif	
+
 		print "\nHour: "; hour
 		if h12 > 0 then
 			if pm then
