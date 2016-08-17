@@ -1,0 +1,228 @@
+//*****************************************************************************
+// Project:  RM186/BL600 BLE GATT Current time service to DS3231 example
+// Copyright (C) 2016 Jose Marcelino - Metavurt Ltd
+//*****************************************************************************
+
+#include "ds3231-lib.sb"
+#include "lib/ble.sblib"
+
+
+#define AUTHENTICATION_REQUIRED     0x0105 
+
+//==============================================================================
+// Global variables
+//==============================================================================
+
+dim prevAds$[20] //Previous adverts (size of 20 adverts)
+dim prevAdCount : prevAdCount = 0 //Number of previous adverts
+
+//==============================================================================
+function HndlrAdvRpt()
+	
+	dim scanRes, periphAddr$, advData$, nDiscarded, nRssi
+	//Read all cached advert reports
+	do 
+
+		scanRes = BleScanGetAdvReport(periphAddr$, advData$, nDiscarded, nRssi)
+		 //   WHILE (looprc == 0)
+		    
+		//Check if this advert was received recently
+		//tmpStr$ = periphAddr$ + advData$
+		
+		if scanRes==0 then 
+			dim tmp : tmp = 0
+			while ((strcmp(periphAddr$, prevAds$[tmp]) != 0) && (tmp < prevAdCount))
+				tmp = tmp+1
+			endwhile
+		
+			if tmp >= prevAdCount then
+		
+				dim res		
+				res = BleScanStop()
+				res = BleConnectCancel()
+				res = BleConnect(periphAddr$, 5000, 20000, 75000, 5000000)
+				if res==0 then
+					print "\nConnecting to "; StrHexize$(periphAddr$)
+				else
+					print "\nError: "; INTEGER.H'res 
+				endif
+		
+				//Check if the prevAds array is too large
+				if (prevAdCount > 18) then
+					//Array too big - clear it
+					dim i 
+					for i = 0 to 19 step 1 
+						prevAds$[i] = ""
+					next
+					PrevAdCount = 0
+				endif
+		
+				//Add this adverts to the recent list
+				prevAds$[prevAdCount] = periphAddr$
+				prevAdCount = prevAdCount+1
+		
+			endif
+		endif
+
+	until scanRes != 0
+endfunc 1
+
+
+//==============================================================================
+function HndlrConnTO() 
+	dim res
+	print "\n--- Connection timeout" 
+	// restart scanning
+	res=BleScanStart(0, 0)
+endfunc 1
+
+FUNCTION HndlrBleMsg(nMsgId, nCtx) 
+	dim res
+	select nMsgId
+		case 0
+			PRINT "... connected to device"
+		
+			// Handle to time service UUID
+			dim svcUUIDh, sIdx, cIdx, dIdx, chUUIDh, descUUIDh
+		
+			// Set service, characterist and descriptor handles based on Bluetooth SIG assigned numbers
+			svcUUIDh = BleHandleUuid16(0x1805)
+			chUUIDh = BleHandleUuid16(0x2A2B)
+			sIdx = 0
+			cIdx = 0
+			res = BleGattcFindChar(nCtx,svcUUIDh,sIdx,chUUIDh,cIdx)
+			//IF res==0 THEN
+			//	//BleDiscCharFirst() will exit with 0 when operation is complete
+			//	WAITEVENT 
+			//ENDIF
+			
+		case 1
+            print "\n\n --- Disconnected"                     
+        case 10
+            print "\nNew bond created"           
+            print "\n\nAttempting to read characteristic again"
+            res = BleGattcFindChar(nCtx,svcUUIDh,sIdx,chUUIDh,cIdx)
+            //rc=BleGattcWrite(nCtx, hDesc, s$)
+            //AssertRC(rc,58)            
+        case 11
+            print "\nPair request: Accepting"
+            res=BleAcceptPairing(nCtx,1)
+            //AssertRC(rc,52)
+            print "\nPairing in progress"
+        case 17   
+            print "\nNew pairing/bond has replaced old key"
+        case 18
+            print "\nConnection now encrypted"
+		case else
+			print "\nReceived message: "; nMsgId
+	ENDSELECT
+ENDFUNC 1
+
+//This handler will be called when a disconnection happens
+FUNCTION HndlrDiscon(nCtx, nRsn)
+	// restart scanning
+	PRINT "\nConnection ";nCtx;" Closed: 0x";nRsn
+	dim res
+	res=BleScanStart(0, 0)
+ENDFUNC 1
+
+
+function HandlerFindChar(cHndl,cProp,hVal,isUuid) as integer
+	dim res
+	print "\nEVFINDCHAR "
+	print " cHndl=";cHndl
+	print " Props=";cProp
+	print " valHndl=";hVal
+	print " ISvcUuid=";isUuid
+	IF hVal == 0 THEN
+		print "\nDid NOT find the characteristic, disconnecting"
+		res=BleDisconnect(cHndl)
+	ELSE
+		PRINT "\nFound the characteristic at handle ";hVal
+		res=BleGattcRead(cHndl,hVal,0)
+		//IF res==0 THEN 
+		//	WAITEVENT
+		//ENDIF
+	ENDIF
+endfunc 1
+
+function HandlerFindDesc(cHndl,hndl) as integer
+	dim res
+	print "\nEVFINDDESC "
+	print " cHndl=";cHndl
+	print " dscHndl=";hndl
+	
+	IF hndl == 0 THEN
+		PRINT "\nDid NOT find the descriptor"
+	ELSE
+		PRINT "\nFound the descriptor at handle ";hndl
+		
+		res=BleGattcRead(cHndl,hndl,0)
+		IF res==0 THEN 
+			WAITEVENT
+		ENDIF
+	ENDIF
+endfunc 0
+
+
+function HandlerAttrRead(cHndl,aHndl,nSts) as integer
+	dim res,nOfst,nAhndl,at$
+	print "\nEVATTRREAD "
+	print " cHndl=";cHndl
+	print " attrHndl=";aHndl
+	print " status=";integer.h' nSts 
+	if nSts == 0 then
+		print "\nAttribute read OK"
+		res = BleGattcReadData(cHndl,nAhndl,nOfst,at$) 
+		print "\nData = ";StrHexize$(at$)
+		print " Offset= ";nOfst
+		print " Len=";strlen(at$)
+		print "\nhandle = ";nAhndl
+	elseif nSts == AUTHENTICATION_REQUIRED then
+		print "\nAuthentication requested"
+		res = BlePair(cHndl,1)
+	else
+		print "\nFailed to read attribute"
+	endif 
+endfunc 1
+
+//==============================================================================
+function Startup() as INTEGER
+	dim result 
+	  	
+  	// Set scan type to active
+  	result = BleScanConfig(2, 1)
+  
+  	result = BleGattcOpen(0,0)
+  	  
+	// Start scanning for BLE devices
+  	result=BleScanStart(0,0)
+  	  
+endfunc result
+
+
+//==============================================================================
+// Event handlers
+//==============================================================================
+
+OnEvent EVBLE_ADV_REPORT call HndlrAdvRpt
+OnEvent EVBLE_CONN_TIMEOUT call HndlrConnTO
+ONEVENT EVBLEMSG CALL HndlrBleMsg 
+ONEVENT EVDISCON CALL HndlrDiscon
+OnEvent EVFINDCHAR call HandlerFindChar
+OnEvent EVFINDDESC call HandlerFindDesc
+OnEvent EVATTRREAD call HandlerAttrRead
+
+//==============================================================================
+// Main block
+//==============================================================================
+dim result
+
+//Just works pairing will work without confirmation
+result = BleSecMngrJustWorksConf(0)
+//Use 'Just Works' pairing
+result = BleSecMngrIoCap(0)
+
+result = Startup()
+
+waitevent
